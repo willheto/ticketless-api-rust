@@ -1,0 +1,39 @@
+# Compiled files
+/target/
+Cargo.lock
+
+# Rust-related
+*.rs.bk
+*.d
+*.rs.bk
+*.rlib
+*.rmeta
+*.dSYM
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# VSCode
+.vscode/
+
+# Rust tooling
+*.cargo/
+
+# Build results
+**/target/
+
+# Other
+*.log
+*.tmp
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Documentation
+/doc/
+
+# Optional files and directories
+*.swp
+*.swo

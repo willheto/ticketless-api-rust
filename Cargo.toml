@@ -1,0 +1,12 @@
+[package]
+name = "ticketless-api-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[workspace]
+members = ["api", "migration"]
+
+[dependencies]
+serde = "1.0.209"
+ticketless-api = { path = "api" }
