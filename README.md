@@ -19,14 +19,16 @@ First spin up the database container
 docker-compose up -d
 ```
 
-Then navigate to /migrate folder and run db migrations:
+Then navigate to /migration folder and run db migrations:
 
 ```bash
 cargo run -- up
 ```
 
-Then run
+Then run 
 
 ```bash
 cargo watch -x run
 ```
+
+on root folder
