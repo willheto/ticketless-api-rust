@@ -12,7 +12,7 @@ services:
       - app-network
     volumes:
       - mysqldata:/var/lib/mysql
-
+      - ./my.cnf:/etc/mysql/my.cnf
 networks:
   app-network:
     driver: bridge
