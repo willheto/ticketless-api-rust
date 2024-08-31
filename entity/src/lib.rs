@@ -1,1 +1,5 @@
-pub mod events; // This should include your events.rs module
+pub mod advertisement;
+pub mod event;
+pub mod organization;
+pub mod ticket;
+pub mod user;
