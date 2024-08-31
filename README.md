@@ -6,9 +6,9 @@ Docker and Rust must be installed.
 
 ## Technologies used
 
-Rust
+Rust,
 Actix,
-SeaORM
+SeaORM,
 MariaDB
 
 ## Installation
