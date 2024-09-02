@@ -1,12 +1,12 @@
-use actix_web::{get, web, HttpResponse, Result};
-use entity::event::Entity as Event;
+use actix_web::{get, post, web, HttpResponse, Result};
+use crate::entity::event::{self, Entity as Event};
 use sea_orm::{
-    sqlx::types::chrono::{DateTime, Utc},
-    Database, DatabaseConnection, DbErr, EntityTrait,
+    sqlx::types::chrono::{DateTime, Utc}, Database, DatabaseConnection, DbErr, EntityTrait, Set
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::env;
+use validator::Validate;
 
 const CRUD_RESPONSE_ARRAY: &str = "events";
 const CRUD_RESPONSE_OBJECT: &str = "event";
@@ -117,7 +117,80 @@ async fn get_single_event(path: web::Path<(i32,)>) -> Result<HttpResponse> {
     }
 }
 
-pub fn create_internal_error_response(error: DbErr) -> Result<HttpResponse> {
+#[derive(Debug, Validate, Deserialize, Serialize)]
+struct EventData {
+    organization_id: Option<i32>,
+
+    #[validate(length(min = 1, max = 255), required)]
+    name: Option<String>,
+
+    #[validate(length(min = 1), required)]
+    location: Option<String>,
+
+    #[validate(length(min = 1), required)]
+    event_type: Option<String>,
+
+    #[validate(length(min = 1), required)]
+    date: Option<String>,
+
+    #[validate(url)]
+    image: Option<String>,
+
+    #[validate(range(min = 0, max = 1), required)]
+    is_public: Option<i8>,
+
+    #[validate(length(min = 1), required)]
+    status: Option<String>,
+
+    #[validate(url)]
+    ticket_sale_url: Option<String>,
+
+    active_from: Option<String>,
+    active_to: Option<String>,
+}
+
+#[post("/events")]
+async fn create_event(payload: web::Json<EventData>) -> Result<HttpResponse> {
+    let event_data = payload.into_inner();
+
+    if let Err(err) = event_data.validate() {
+        return Ok(HttpResponse::BadRequest().json(json!({
+            "error": "Validation error",
+            "details": err
+        })));
+    }
+
+    match get_database_connection().await {
+        Ok(db) => {
+            let event = event::ActiveModel {
+                organization_id: Set(Some(event_data.organization_id.unwrap_or_default())),
+                name: Set(event_data.name.unwrap_or_default()),
+                location: Set(event_data.location.unwrap_or_default()),
+                event_type: Set(event_data.event_type.unwrap_or_default()),
+                date: Set(event_data.date.unwrap_or_default()),
+                image: Set(event_data.image.unwrap_or_default()),
+                is_public: Set(event_data.is_public.unwrap_or_default()),
+                status: Set(event_data.status.unwrap_or_default()),
+                ticket_sale_url: Set(event_data.ticket_sale_url.unwrap_or_default()),
+                active_from: Set(event_data.active_from.unwrap_or_default()),
+                active_to: Set(event_data.active_to.unwrap_or_default()),
+                ..Default::default()
+            };
+
+            let response = event::Entity::insert(event).exec(&db).await;
+
+            match response {
+                Ok(_) => Ok(HttpResponse::Created()
+                    .content_type("application/json")
+                    .finish()),
+                Err(err) => create_internal_error_response(err),
+            }
+        }
+        Err(err) => create_internal_error_response(err),
+    }
+}
+
+fn create_internal_error_response(error: DbErr) -> Result<HttpResponse> {
     let json_response = serde_json::json!({
         "error": error.to_string()
     });
@@ -152,4 +225,5 @@ pub fn create_response_data(data: ResponseDataType) -> Result<HttpResponse, acti
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(get_all_events);
     cfg.service(get_single_event);
+    cfg.service(create_event);
 }

@@ -1,11 +1,11 @@
 [package]
-name = "migration"
+name = "database"
 version = "0.1.0"
 edition = "2021"
 publish = false
 
 [lib]
-name = "migration"
+name = "database"
 path = "src/lib.rs"
 
 [dependencies]

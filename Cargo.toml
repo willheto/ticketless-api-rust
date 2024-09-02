@@ -5,8 +5,14 @@ edition = "2021"
 publish = false
 
 [workspace]
-members = ["api", "migration"]
+members = ["database"]
 
 [dependencies]
+actix-web = "4"
+dotenv = "0.15.0"
+sea-orm = { version = "1.0.1", features = [ "sqlx-mysql", "runtime-tokio"] }
 serde = "1.0.209"
-ticketless-api = { path = "api" }
+serde_json = "1.0.127"
+validator = { version = "0.18.1", features = ["derive"] }
+
+

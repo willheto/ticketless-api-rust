@@ -1,3 +1,6 @@
+mod api;
+mod entity;
+
 fn main() {
-    ticketless_api::main();
+    api::start_server();
 }
