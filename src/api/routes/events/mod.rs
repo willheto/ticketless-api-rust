@@ -1,35 +1,15 @@
-use actix_web::{get, post, web, HttpResponse, Result};
+pub mod models;
+
 use crate::entity::event::{self, Entity as Event};
-use sea_orm::{
-    sqlx::types::chrono::{DateTime, Utc}, Database, DatabaseConnection, DbErr, EntityTrait, Set
-};
-use serde::{Deserialize, Serialize};
+use actix_web::{get, post, web, HttpResponse, Result};
+use models::{EventPostData, EventResponseData, EventResponseDataType};
+use sea_orm::{Database, DatabaseConnection, DbErr, EntityTrait, Set};
 use serde_json::json;
-use std::env;
 use validator::Validate;
+use std::env;
 
 const CRUD_RESPONSE_ARRAY: &str = "events";
 const CRUD_RESPONSE_OBJECT: &str = "event";
-
-#[derive(Serialize)]
-pub struct EventResponse {
-    pub event_id: i32,
-    pub organization_id: Option<i32>,
-    pub name: String,
-    pub location: String,
-    pub event_type: String,
-    pub date: String,
-    pub image: String,
-    pub is_public: i8,
-    pub status: String,
-    pub ticket_sale_url: String,
-    pub active_from: String,
-    pub active_to: String,
-    pub trending_score: i32,
-    pub ticket_max_price: Option<i32>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: Option<DateTime<Utc>>,
-}
 
 async fn get_database_connection() -> Result<DatabaseConnection, DbErr> {
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
@@ -44,9 +24,9 @@ async fn get_all_events() -> Result<HttpResponse> {
 
             match result {
                 Ok(result) => {
-                    let events: Vec<EventResponse> = result
+                    let events: Vec<EventResponseData> = result
                         .into_iter()
-                        .map(|event| EventResponse {
+                        .map(|event| EventResponseData {
                             event_id: event.event_id,
                             organization_id: event.organization_id,
                             name: event.name,
@@ -67,7 +47,7 @@ async fn get_all_events() -> Result<HttpResponse> {
                         .collect();
 
                     let json_response =
-                        create_response_data(ResponseDataType::EventResponseArray(events));
+                        create_response_data(EventResponseDataType::EventResponseArray(events));
                     json_response
                 }
                 Err(err) => create_internal_error_response(err),
@@ -86,7 +66,7 @@ async fn get_single_event(path: web::Path<(i32,)>) -> Result<HttpResponse> {
 
             match result {
                 Ok(Some(event)) => {
-                    let event_response = EventResponse {
+                    let event_response = EventResponseData {
                         event_id: event.event_id,
                         organization_id: event.organization_id,
                         name: event.name,
@@ -106,7 +86,7 @@ async fn get_single_event(path: web::Path<(i32,)>) -> Result<HttpResponse> {
                     };
 
                     let json_response =
-                        create_response_data(ResponseDataType::EventResponseObject(event_response));
+                        create_response_data(EventResponseDataType::EventResponseObject(event_response));
                     json_response
                 }
                 Ok(None) => Ok(HttpResponse::NotFound().finish()),
@@ -117,40 +97,8 @@ async fn get_single_event(path: web::Path<(i32,)>) -> Result<HttpResponse> {
     }
 }
 
-#[derive(Debug, Validate, Deserialize, Serialize)]
-struct EventData {
-    organization_id: Option<i32>,
-
-    #[validate(length(min = 1, max = 255), required)]
-    name: Option<String>,
-
-    #[validate(length(min = 1), required)]
-    location: Option<String>,
-
-    #[validate(length(min = 1), required)]
-    event_type: Option<String>,
-
-    #[validate(length(min = 1), required)]
-    date: Option<String>,
-
-    #[validate(url)]
-    image: Option<String>,
-
-    #[validate(range(min = 0, max = 1), required)]
-    is_public: Option<i8>,
-
-    #[validate(length(min = 1), required)]
-    status: Option<String>,
-
-    #[validate(url)]
-    ticket_sale_url: Option<String>,
-
-    active_from: Option<String>,
-    active_to: Option<String>,
-}
-
 #[post("/events")]
-async fn create_event(payload: web::Json<EventData>) -> Result<HttpResponse> {
+async fn create_event(payload: web::Json<EventPostData>) -> Result<HttpResponse> {
     let event_data = payload.into_inner();
 
     if let Err(err) = event_data.validate() {
@@ -200,21 +148,16 @@ fn create_internal_error_response(error: DbErr) -> Result<HttpResponse> {
         .body(json_response.to_string()))
 }
 
-pub enum ResponseDataType {
-    EventResponseArray(Vec<EventResponse>),
-    EventResponseObject(EventResponse),
-}
-
 /**
  * Map response data according to data type.
  * If data is an object, return an object, else, return array of objects
  */
-pub fn create_response_data(data: ResponseDataType) -> Result<HttpResponse, actix_web::Error> {
+pub fn create_response_data(data: EventResponseDataType) -> Result<HttpResponse, actix_web::Error> {
     let json_response = match data {
-        ResponseDataType::EventResponseArray(events) => {
+        EventResponseDataType::EventResponseArray(events) => {
             json!({ CRUD_RESPONSE_ARRAY: events })
         }
-        ResponseDataType::EventResponseObject(event) => {
+        EventResponseDataType::EventResponseObject(event) => {
             json!({ CRUD_RESPONSE_OBJECT: event })
         }
     };
